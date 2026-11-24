@@ -32,7 +32,7 @@ async function start(){
     const end=row.index.at(-1),change=Number.isFinite(end)?Math.round((end-100)*10)/10:null;
     const peak=Math.max(row.local.rate||0,row.prefRate||0,0.01);
     function bar(name,rate,cls){return '<div>'+name+'　<strong>'+format(rate)+'</strong></div><div class="bar '+cls+'"><i style="width:'+((rate||0)*100/peak)+'%"></i></div>'}
-    el('results').innerHTML='<section><h2>'+r.name+'の'+row.topic+'の外来需要</h2><small>2025年から2040年への変化 · 参考推計</small><strong class="number">'+(change===null?'未算出':(change>0?'+':'')+format(change)+'%')+'</strong>'+trend(row.index,data.years)+'<small>需要指数（2025年＝100）</small></section><section><h2>'+r.name+'で'+row.topic+'を掲げる診療所</h2><strong class="number">'+format(row.local.count)+'</strong> 施設<p>人口1万人当たりの施設数</p>'+bar(r.name,row.local.rate,'')+bar(r.pref,row.prefRate,'pref')+'<small>医療情報ネット '+data.asOf.replace(/(....)(..)(..)/,'$1年$2月$3日')+'時点 ／ 2025年推計人口</small></section>';
+    el('results').innerHTML='<section><h2>'+r.name+'の'+row.topic+'の外来需要</h2><small>2025年から2040年への変化 · 参考推計</small><strong class="number">'+(change===null?'未算出':(change>0?'+':'')+format(change)+'%')+'</strong>'+trend(row.index,data.years)+'<small>需要指数（2025年＝100）</small></section><section><h2>'+r.name+(row.topic==='歯科'?'の歯科診療所':'で'+row.topic+'を掲げる診療所')+'</h2><strong class="number">'+format(row.local.count)+'</strong> 施設<p>人口1万人当たりの施設数</p>'+bar(r.name,row.local.rate,'')+bar(r.pref,row.prefRate,'pref')+'<small>医療情報ネット '+(row.topic==='歯科'?data.dentalAsOf:data.asOf).replace(/(....)(..)(..)/,'$1年$2月$3日')+'時点 ／ 2025年推計人口</small></section>';
     const url=new URL(location.href);url.searchParams.set('region',r.code);url.searchParams.set('topic',row.topic);history.replaceState(null,'',url);
   }
   topics(query.get('topic'));render();

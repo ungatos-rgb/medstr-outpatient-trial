@@ -13,7 +13,7 @@ from age_profile a join age_profile_source s using(src_no)
 join age_text n on n.id=a.name_id join age_text sv on sv.id=a.svc
 join age_text sx on sx.id=a.sex_id join age_text st on st.id=a.status_id
 where (s.family='ipss' and a.year in (2020,2025,2030,2035,2040))
-or (s.family in ('survey','survey-detail') and a.year=2023)
+or (s.family in ('survey','survey-detail','survey-dental') and a.year=2023)
 order by case s.family when 'survey' then 0 else 1 end,a.seq`);
 const population=new Map(), survey=new Map(), names=new Map();
 const key=(...v)=>v.join('|');
@@ -82,11 +82,38 @@ for(const r of master.prepare("select r.city_code code,i.specialties_json labels
 }
 function pop(code){const a=populationBand(2025,code,'男',0,199),b=populationBand(2025,code,'女',0,199);return a===null||b===null?null:a+b}
 const prefectures=new Map([...names].filter(([c])=>c.length===2));
+const dentalBatch=master.prepare("select batch_no,as_of,count(*) n from facility_row where type='歯科診療所' group by batch_no,as_of order by as_of desc,n desc limit 1").get();
+if(!dentalBatch)throw Error('歯科診療所一覧が未収集です');
+const dentalCounts=new Map();
+for(const row of master.prepare("select city_code,count(*) n from facility_row where type='歯科診療所' and batch_no=? group by city_code").iterate(dentalBatch.batch_no)){
+ if(!row.city_code)continue;
+ dentalCounts.set(row.city_code,row.n);
+ const pref=row.city_code.slice(0,2);dentalCounts.set(pref,(dentalCounts.get(pref)||0)+row.n);
+}
+const dentalReference=new Map();
+for(const sex of ['男','女'])for(let lo=0;lo<=90;lo+=5){
+ const hi=lo===90?199:lo+4;
+ const cells=[...survey.values()].filter(r=>r.code==='00'&&r.svc==='dental-total'&&r.sex===sex&&r.lo>=lo&&r.hi<=hi).sort((a,b)=>a.lo-b.lo);
+ const valid=cells.length&&cells[0].lo===lo&&cells.at(-1).hi===hi&&cells.every((r,i)=>r.v!==null&&r.v>=0&&(!i||r.lo===cells[i-1].hi+1));
+ const bases=[...prefectures.keys()].map(p=>{const a=populationBand(2020,p,sex,lo,hi),b=populationBand(2025,p,sex,lo,hi);return a===null||b===null?null:a+(b-a)*.6});
+ const denominator=bases.every(v=>v!==null)?bases.reduce((a,b)=>a+b,0):null;
+ dentalReference.set(key(sex,lo),valid&&denominator>0?cells.reduce((a,r)=>a+r.v,0)/denominator:null);
+}
+function dentalDemand(code,year){
+ let total=0;
+ for(const sex of ['男','女'])for(let lo=0;lo<=90;lo+=5){
+  const rate=dentalReference.get(key(sex,lo)),value=populationBand(year,code,sex,lo,lo===90?199:lo+4);
+  if(rate===null||value===null)return null;
+  total+=rate*value;
+ }
+ return total;
+}
 for(const code of names.keys()){
  if(code.length!==5||!code.endsWith('00'))continue;
  const wards=[...names.keys()].filter(c=>c.length===5&&c!==code&&c.startsWith(code.slice(0,3)));
  if(!wards.length)continue;
  for(const topic of Object.keys(recipes))counts.set(key(code,topic),wards.reduce((sum,c)=>sum+(counts.get(key(c,topic))||0),0));
+ dentalCounts.set(code,wards.reduce((sum,c)=>sum+(dentalCounts.get(c)||0),0));
  if(wards.some(c=>missing.has(c)))missing.add(code);
 }
 const regions=[...names].filter(([code])=>code.length===5).map(([code,fullname])=>{
@@ -97,7 +124,9 @@ const regions=[...names].filter(([code])=>code.length===5).map(([code,fullname])
   const count=missing.has(code)?null:counts.get(key(code,topic))||0, p=pop(code),pc=missing.has(code.slice(0,2))?null:counts.get(key(code.slice(0,2),topic))||0,pp=pop(code.slice(0,2));
   return {topic,index,local:{count,rate:count!==null&&p>0?count*10000/p:null},prefRate:pc!==null&&pp>0?pc*10000/pp:null};
  });
+ const totals=years.map(year=>dentalDemand(code,year)),count=dentalCounts.get(code)||0,p=pop(code),pp=pop(code.slice(0,2)),pc=dentalCounts.get(code.slice(0,2))||0;
+ items.push({topic:'歯科',index:totals.map(v=>v!==null&&totals[0]>0?Math.round(v/totals[0]*1000)/10:null),local:{count,rate:p>0?count*10000/p:null},prefRate:pp>0?pc*10000/pp:null});
  return {code,name,pref,items};
 });
-writeFileSync(new URL('public/data.json',import.meta.url),JSON.stringify({years,asOf:batch.as_of,regions})+'\n');
+writeFileSync(new URL('public/data.json',import.meta.url),JSON.stringify({years,asOf:batch.as_of,dentalAsOf:dentalBatch.as_of,regions})+'\n');
 console.log('regions:',regions.length,'bytes:',Buffer.byteLength(JSON.stringify(regions)));
