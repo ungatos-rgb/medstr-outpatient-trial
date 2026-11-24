@@ -40,4 +40,28 @@ async function start(){
 }
 start().catch(()=>{el('results').textContent='地域データを読み込めません。通信を確認してページを開き直してください。'});
 el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(el('product').href);el('notice').textContent='製品ページのリンクをコピーしました。'}catch{el('notice').textContent='製品紹介のボタンを長押ししてリンクをコピーしてください。'}};
+const installCard=el('install-card'),installButton=el('install-button'),installHelp=el('install-help');
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/i.test(navigator.userAgent);
+const installed=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let installPrompt=null;
+if((isIOS||isAndroid)&&!installed())installCard.hidden=false;
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(!installed())installCard.hidden=false;});
+window.addEventListener('appinstalled',()=>{installPrompt=null;installCard.hidden=true;});
+installButton.addEventListener('click',async()=>{
+  if(installed()){installCard.hidden=true;return;}
+  if(installPrompt){
+    const prompt=installPrompt;installPrompt=null;
+    try{await prompt.prompt();await prompt.userChoice;}catch{}
+    if(installed())installCard.hidden=true;
+    return;
+  }
+  installHelp.hidden=!installHelp.hidden;
+  installButton.setAttribute('aria-expanded',String(!installHelp.hidden));
+  installHelp.textContent=isIOS
+    ?'Safariの共有ボタン（四角から上矢印）をタップし、「ホーム画面に追加」→「追加」を選んでください。表示されない場合はメニューを下へスクロールしてください。'
+    :isAndroid
+      ?'ブラウザ右上のメニュー（︙）から「アプリをインストール」または「ホーム画面に追加」を選んでください。'
+      :'ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。';
+});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');

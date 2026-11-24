@@ -1,5 +1,5 @@
-const cacheName='medstr-trial-v2';
-const assets=['./','./index.html','./style.css','./app.js','./data.json','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const cacheName='medstr-trial-v3';
+const assets=['./','./index.html','./style.css','./app.js','./data.json','./manifest.webmanifest','./icon-192.png','./icon-512.png','./mascot.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(cacheName).then(cache=>cache.addAll(assets))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('medstr-trial-')&&k!==cacheName).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',event=>{
