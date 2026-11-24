@@ -12,10 +12,16 @@ function trend(values,years){
 async function start(){
   const response=await fetch('./data.json');
   if(!response.ok)throw Error();
-  const data=await response.json(),region=el('region'),topic=el('topic');
+  const data=await response.json(),region=el('region'),topic=el('topic'),pref=el('pref');
   const query=new URLSearchParams(location.search);
-  for(const r of data.regions)region.add(new Option(r.pref+' '+r.name,r.code));
-  if(data.regions.some(r=>r.code===query.get('region')))region.value=query.get('region');
+  const initial=data.regions.find(r=>r.code===query.get('region'))||data.regions.find(r=>r.code==='43203')||data.regions[0];
+  for(const name of [...new Set(data.regions.map(r=>r.pref))])pref.add(new Option(name,name));
+  pref.value=initial.pref;
+  function regions(preferred){
+    region.replaceChildren(...data.regions.filter(r=>r.pref===pref.value).map(r=>new Option(r.name,r.code)));
+    if(data.regions.some(r=>r.pref===pref.value&&r.code===preferred))region.value=preferred;
+  }
+  regions(initial.code);
   function topics(preferred){
     const r=data.regions.find(v=>v.code===region.value);
     topic.replaceChildren(...r.items.map(i=>new Option(i.topic,i.topic)));
@@ -30,7 +36,7 @@ async function start(){
     const url=new URL(location.href);url.searchParams.set('region',r.code);url.searchParams.set('topic',row.topic);history.replaceState(null,'',url);
   }
   topics(query.get('topic'));render();
-  region.onchange=()=>{topics(topic.value);render()};topic.onchange=render;
+  pref.onchange=()=>{regions();topics(topic.value);render()};region.onchange=()=>{topics(topic.value);render()};topic.onchange=render;
 }
 start().catch(()=>{el('results').textContent='地域データを読み込めません。通信を確認してページを開き直してください。'});
 el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(el('product').href);el('notice').textContent='製品ページのリンクをコピーしました。'}catch{el('notice').textContent='製品紹介のボタンを長押ししてリンクをコピーしてください。'}};
