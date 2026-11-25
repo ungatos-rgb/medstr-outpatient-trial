@@ -9,6 +9,14 @@ function trend(values,years){
   const points=values.map((v,i)=>'<text x="'+x(i)+'" y="119">'+years[i]+'</text>'+(Number.isFinite(v)?'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="#197469"/><text x="'+x(i)+'" y="'+(y(v)-9)+'">'+format(v)+'</text>':'')).join('');
   return '<svg viewBox="0 0 335 126" text-anchor="middle" role="img" aria-label="'+years.map((year,i)=>year+'年 '+format(values[i])).join('、')+'">'+lines+points+'</svg>';
 }
+function populationPanel(region,years){
+  const labels=['15歳未満','15〜64歳','65歳以上'];
+  const rows=region.populationByAge||[];
+  if(!rows.length)return '<section><h2>年代別の将来人口</h2><p>人口推計を確認できません。</p></section>';
+  const header=years.map(year=>'<th scope="col">'+year+'年</th>').join('');
+  const body=labels.map((label,index)=>'<tr><th scope="row">'+label+'</th>'+years.map((_,i)=>'<td>'+format(rows[i]?.[index])+'</td>').join('')+'</tr>').join('');
+  return '<section><h2>'+region.name+'の年代別人口</h2><p>将来の人口構成を確認できます。</p><div class="population-table"><table><thead><tr><th scope="col">年齢</th>'+header+'</tr></thead><tbody>'+body+'</tbody></table></div><small>単位：人。社人研「日本の地域別将来推計人口」（2023年推計）。各年10月1日の推計値です。</small></section>';
+}
 async function start(){
   const response=await fetch('./data.json');
   if(!response.ok)throw Error();
@@ -33,6 +41,7 @@ async function start(){
     const peak=Math.max(row.local.rate||0,row.prefRate||0,0.01);
     function bar(name,rate,cls){return '<div>'+name+'　<strong>'+format(rate)+'</strong></div><div class="bar '+cls+'"><i style="width:'+((rate||0)*100/peak)+'%"></i></div>'}
     el('results').innerHTML='<section><h2>'+r.name+'の'+row.topic+'の外来需要</h2><small>2025年から2040年への変化 · 参考推計</small><strong class="number">'+(change===null?'未算出':(change>0?'+':'')+format(change)+'%')+'</strong>'+trend(row.index,data.years)+'<small>需要指数（2025年＝100）</small></section><section><h2>'+r.name+(row.topic==='歯科'?'の歯科診療所':'で'+row.topic+'を掲げる診療所')+'</h2><strong class="number">'+format(row.local.count)+'</strong> 施設<p>人口1万人当たりの施設数</p>'+bar(r.name,row.local.rate,'')+bar(r.pref,row.prefRate,'pref')+'<small>医療情報ネット '+(row.topic==='歯科'?data.dentalAsOf:data.asOf).replace(/(....)(..)(..)/,'$1年$2月$3日')+'時点 ／ 2025年推計人口</small></section>';
+    el('results').insertAdjacentHTML('beforeend',populationPanel(r,data.years));
     const url=new URL(location.href);url.searchParams.set('region',r.code);url.searchParams.set('topic',row.topic);history.replaceState(null,'',url);
   }
   topics(query.get('topic'));render();

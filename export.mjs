@@ -81,6 +81,11 @@ for(const r of master.prepare("select r.city_code code,i.specialties_json labels
  for(const [topic,match] of Object.entries(groups))if(labels.some(match))for(const code of [r.code,r.code.slice(0,2)])counts.set(key(code,topic),(counts.get(key(code,topic))||0)+1);
 }
 function pop(code){const a=populationBand(2025,code,'男',0,199),b=populationBand(2025,code,'女',0,199);return a===null||b===null?null:a+b}
+function agePopulation(code,year,lo,hi){
+ const male=populationBand(year,code,'男',lo,hi);
+ const female=populationBand(year,code,'女',lo,hi);
+ return male===null||female===null?null:male+female;
+}
 const prefectures=new Map([...names].filter(([c])=>c.length===2));
 const dentalBatch=master.prepare("select batch_no,as_of,count(*) n from facility_row where type='歯科診療所' group by batch_no,as_of order by as_of desc,n desc limit 1").get();
 if(!dentalBatch)throw Error('歯科診療所一覧が未収集です');
@@ -126,7 +131,12 @@ const regions=[...names].filter(([code])=>code.length===5).map(([code,fullname])
  });
  const totals=years.map(year=>dentalDemand(code,year)),count=dentalCounts.get(code)||0,p=pop(code),pp=pop(code.slice(0,2)),pc=dentalCounts.get(code.slice(0,2))||0;
  items.push({topic:'歯科',index:totals.map(v=>v!==null&&totals[0]>0?Math.round(v/totals[0]*1000)/10:null),local:{count,rate:p>0?count*10000/p:null},prefRate:pp>0?pc*10000/pp:null});
- return {code,name,pref,items};
+ const populationByAge=years.map(year=>[
+  agePopulation(code,year,0,14),
+  agePopulation(code,year,15,64),
+  agePopulation(code,year,65,199)
+ ]);
+ return {code,name,pref,items,populationByAge};
 });
 writeFileSync(new URL('public/data.json',import.meta.url),JSON.stringify({years,asOf:batch.as_of,dentalAsOf:dentalBatch.as_of,regions})+'\n');
 console.log('regions:',regions.length,'bytes:',Buffer.byteLength(JSON.stringify(regions)));
