@@ -64,10 +64,27 @@ el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(el('product
 const installCard=el('install-card'),installButton=el('install-button'),installHelp=el('install-help');
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isAndroid=/Android/i.test(navigator.userAgent);
+const isSocialBrowser=/FBAN|FBAV|FB_IAB|FBIOS|Twitter|XAndroid/i.test(navigator.userAgent);
 const installed=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(isSocialBrowser&&(isAndroid||isIOS)&&!installed()){
+  const card=el('external-browser'),open=el('open-browser'),copy=el('copy-address');
+  card.hidden=false;
+  const current=new URL(location.href);
+  if(isAndroid){
+    open.href='intent://'+current.host+current.pathname+current.search+current.hash+'#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
+    el('browser-help').textContent='開かない場合は、画面の「⋮」から「外部ブラウザで開く」を選んでください。';
+  }else{
+    open.hidden=true;
+    el('browser-help').textContent='共有メニューから「ブラウザで開く」を選ぶか、リンクをコピーしてSafariに貼り付けてください。';
+  }
+  copy.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(location.href);el('browser-notice').textContent='コピーしました。ブラウザに貼り付けて開いてください。';}
+    catch{el('browser-notice').textContent='共有メニューからリンクをコピーしてください。';}
+  });
+}
 let installPrompt=null;
-if((isIOS||isAndroid)&&!installed())installCard.hidden=false;
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(!installed())installCard.hidden=false;});
+if((isIOS||isAndroid)&&!installed()&&!isSocialBrowser)installCard.hidden=false;
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(!installed()&&!isSocialBrowser)installCard.hidden=false;});
 window.addEventListener('appinstalled',()=>{installPrompt=null;installCard.hidden=true;});
 installButton.addEventListener('click',async()=>{
   if(installed()){installCard.hidden=true;return;}
