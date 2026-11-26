@@ -34,7 +34,7 @@ async function start(){
   if(!response.ok)throw Error();
   const data=await response.json(),region=el('region'),topic=el('topic'),pref=el('pref');
   const query=new URLSearchParams(location.search);
-  const initial=data.regions.find(r=>r.code===query.get('region'))||data.regions.find(r=>r.code==='43203')||data.regions[0];
+  const initial=data.regions.find(r=>r.code===query.get('region'))||data.regions.find(r=>r.code==='13101')||data.regions[0];
   for(const name of [...new Set(data.regions.map(r=>r.pref))])pref.add(new Option(name,name));
   pref.value=initial.pref;
   function regions(preferred){
