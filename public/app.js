@@ -20,7 +20,7 @@ function populationPanel(region,years){
     const total=totals[i],x=58+i*68;
     if(total===null)return '<text x="'+(x+20)+'" y="135" text-anchor="middle">未算出</text><text x="'+(x+20)+'" y="178" text-anchor="middle">'+year+'</text>';
     let y=150;
-    const segments=rows[i].map((value,j)=>{const height=maximum>0?value/maximum*115:0;y-=height;return '<rect x="'+x+'" y="'+y+'" width="40" height="'+height+'" fill="'+colors[j]+'"><title>'+year+'年 '+labels[j]+' '+format(value)+'人</title></rect>'+(height>=11?'<text class="population-bar-label" x="'+(x+20)+'" y="'+(y+height/2)+'" text-anchor="middle" dominant-baseline="central">'+format(value)+'</text>':'');}).join('');
+    const segments=rows[i].map((value,j)=>{const height=maximum>0?value/maximum*115:0;y-=height;return '<rect x="'+x+'" y="'+y+'" width="40" height="'+height+'" fill="'+colors[j]+'"><title>'+year+'年 '+labels[j]+' '+format(value)+'人</title></rect>'+(height>=8?'<text class="population-bar-label" x="'+(x+20)+'" y="'+(y+height/2)+'" text-anchor="middle" dominant-baseline="central">'+format(value)+'</text>':'');}).join('');
     return segments+'<text x="'+(x+20)+'" y="'+Math.max(16,y-7)+'" text-anchor="middle">'+format(total)+'</text><text x="'+(x+20)+'" y="178" text-anchor="middle">'+year+'</text>';
   }).join('');
   const legend=labels.map((label,i)=>'<span><i style="background:'+colors[i]+'"></i>'+label+'</span>').join('');
