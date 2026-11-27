@@ -20,14 +20,17 @@ function populationPanel(region,years){
     const total=totals[i],x=58+i*68;
     if(total===null)return '<text x="'+(x+20)+'" y="135" text-anchor="middle">未算出</text><text x="'+(x+20)+'" y="178" text-anchor="middle">'+year+'</text>';
     let y=150;
-    const segments=rows[i].map((value,j)=>{const height=maximum>0?value/maximum*115:0;y-=height;return '<rect x="'+x+'" y="'+y+'" width="40" height="'+height+'" fill="'+colors[j]+'"><title>'+year+'年 '+labels[j]+' '+format(value)+'人</title></rect>';}).join('');
+    const segments=rows[i].map((value,j)=>{const height=maximum>0?value/maximum*115:0;y-=height;return '<rect x="'+x+'" y="'+y+'" width="40" height="'+height+'" fill="'+colors[j]+'"><title>'+year+'年 '+labels[j]+' '+format(value)+'人</title></rect>'+(height>=11?'<text class="population-bar-label" x="'+(x+20)+'" y="'+(y+height/2)+'" text-anchor="middle" dominant-baseline="central">'+format(value)+'</text>':'');}).join('');
     return segments+'<text x="'+(x+20)+'" y="'+Math.max(16,y-7)+'" text-anchor="middle">'+format(total)+'</text><text x="'+(x+20)+'" y="178" text-anchor="middle">'+year+'</text>';
   }).join('');
   const legend=labels.map((label,i)=>'<span><i style="background:'+colors[i]+'"></i>'+label+'</span>').join('');
-  const chart='<div class="population-legend" aria-hidden="true">'+legend+'</div><svg class="population-chart" viewBox="0 0 335 190" role="img" aria-label="年代別人口の積み上げ棒グラフ。数値は下の表に表示しています。"><line x1="42" y1="150" x2="325" y2="150" stroke="#9cb2aa"/>'+bars+'<text x="12" y="150">0</text></svg><small>棒の高さは総人口、色は年齢区分を表します。</small>';
+  const chart='<div class="population-legend" aria-hidden="true">'+legend+'</div><svg class="population-chart" viewBox="0 0 335 190" role="img" aria-label="年代別人口の積み上げ棒グラフ。数値は下の表に表示しています。"><line x1="42" y1="150" x2="325" y2="150" stroke="#9cb2aa"/>'+bars+'<text x="12" y="150">0</text></svg><small>棒の上は総人口、色の中は年代別の人数です。小さい部分の人数は下の表で確認できます。</small>';
+  const first=years.indexOf(2025),last=years.indexOf(2040);
+  const changes=labels.map((label,i)=>{const a=rows[first]?.[i],b=rows[last]?.[i];const change=Number.isFinite(a)&&a>0&&Number.isFinite(b)?(b-a)/a*100:null;const percentage=change===null?'増減率を算出できません':(change>0?'+':'')+format(change)+'%';return '<li><span>'+label+'</span><strong>'+format(a)+'人 → '+format(b)+'人 <em>'+percentage+'</em></strong></li>';}).join('');
+  const comparison='<div class="population-change"><h3>2025年から2040年の変化</h3><ul>'+changes+'</ul><small>増減率は2025年の人口を基準にしています。</small></div>';
   const header=years.map(year=>'<th scope="col">'+year+'年</th>').join('');
   const body=labels.map((label,index)=>'<tr><th scope="row">'+label+'</th>'+years.map((_,i)=>'<td>'+format(rows[i]?.[index])+'</td>').join('')+'</tr>').join('');
-  return '<section><h2>'+region.name+'の年代別人口</h2><p>将来の人口構成を確認できます。</p>'+chart+'<div class="population-table"><table><thead><tr><th scope="col">年齢</th>'+header+'</tr></thead><tbody>'+body+'</tbody></table></div><small>単位：人。社人研「日本の地域別将来推計人口」（2023年推計）。各年10月1日の推計値です。</small></section>';
+  return '<section><h2>'+region.name+'の年代別人口</h2><p>将来の人口構成を確認できます。</p>'+chart+comparison+'<div class="population-table"><table><thead><tr><th scope="col">年齢</th>'+header+'</tr></thead><tbody>'+body+'</tbody></table></div><small>単位：人。社人研「日本の地域別将来推計人口」（2023年推計）。各年10月1日の推計値です。</small></section>';
 }
 async function start(){
   const response=await fetch('./data.json');
